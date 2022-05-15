@@ -7,6 +7,7 @@ library(igraph)
 library(glue)
 library(lubridate)
 library(broom)
+library(googledrive)
 
 ##########
 # Read in data
@@ -28,7 +29,11 @@ library(broom)
 df.fips <- read_csv('data/state_and_county_fips_master.csv') %>% 
   mutate(fips = if_else(fips ==02270, 02158, fips),
          fips = if_else(fips == 46113, 46102, fips))
-df.r <- read_csv("/Volumes/GoogleDrive-102101107633985672393/.shortcut-targets-by-id/12V72oXyWtm3AbaVo2SKmwnTsnzJvFRii/COVID_BansalLab/DATA/Safegraph_data/PROCESSED_DATA/weekly_patterns_county_indooroutdoor_April2021/previous_versions_frombefore_July2021_backfill/weekly_patterns_countylevel_summarized2020.csv") %>% 
+df.r <- drive_get("COVID_BansalLab/DATA/Safegraph_data/PROCESSED_DATA/weekly_patterns_county_indooroutdoor_April2021/previous_versions_frombefore_July2021_backfill/weekly_patterns_countylevel_summarized2020.csv") 
+
+
+
+%>% 
   rbind(read_csv('/Volumes/GoogleDrive-102101107633985672393/.shortcut-targets-by-id/12V72oXyWtm3AbaVo2SKmwnTsnzJvFRii/COVID_BansalLab/DATA/Safegraph_data/PROCESSED_DATA/weekly_patterns_county_indooroutdoor_April2021/previous_versions_frombefore_July2021_backfill/weekly_patterns_countylevel_summarized2021.csv')) %>% 
     rename(week = date,
          fips = countyFIPS,

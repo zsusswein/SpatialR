@@ -71,7 +71,7 @@ df.incidence <-read_csv('https://raw.githubusercontent.com/nytimes/covid-19-data
 weeks <- df.incidence %>% 
   filter(fips==1001) %>% 
   arrange(week) %>% 
-  filter(week >= ymd("2020-01-26")) %>% 
+  filter(week >= ymd("2020-04-19")) %>% 
   mutate(week = as.character.Date(week)) %>% 
   pull(week)
 
