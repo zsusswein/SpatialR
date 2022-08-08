@@ -10,6 +10,8 @@ library(glue)
 ###################
 # Data
 
+variants_tracking <- c('alpha', 'delta', 'other', 'omicron')
+
 
 df.fips <- read_csv('data/state_and_county_fips_master.csv')
 
@@ -63,40 +65,19 @@ df.vax = read_csv('data/vaccination.csv') %>%
   rename(complete = Complete,
          partial = Partial)
 
-df.variant <- read_csv('data/raw_variant_proportions.csv') %>% 
-  mutate(week = mdy(`Day of Week Ending`),
-         week = round_date(week, unit = 'week'),
-         modeltype = as.factor(Modeltype)) %>% 
-  rename(region = `Usa Or Hhsregion`,
-         lineage = Variant) %>% 
-  full_join(d) %>% 
-  left_join(variant_names) %>% 
-  mutate(name = if_else(is.na(name), 'other', name)) %>% 
-  filter(region != 'USA', modeltype == 'weighted' | is.na(modeltype)) %>%
-  group_by(name, week, region) %>% 
-  summarize(p = mean(Share)) %>% 
+df.variant <- write_csv(df, 'data/collapsed_variant_proportion.csv') %>% 
+  mutate(lineage = str_to_lower(lineage),
+         lineage = if_else(lineage %in% variants_tracking,
+                           lineage,
+                           'other')) %>% 
+  group_by(week, state, lineage) %>% 
+  summarize(n = sum(n)) %>% 
   ungroup() %>% 
-  select(week, region, p, name) %>% 
-  group_by(week, region, name) %>% 
-  summarize(p = mean(p),
-            p = p) %>% 
+  group_by(week, state) %>% 
+  mutate(N = sum(n)) %>% 
   ungroup() %>% 
-  complete(week, region) %>% 
-  filter(!is.na(p)) %>% 
-  group_by(week, region) %>% 
-  mutate(total = sum(p)) %>% 
-  ungroup() %>% 
-  pivot_wider(id_cols = c(week, region, total), names_from = name, values_from = p) %>% 
-  mutate(other = other + (1-total)) %>% 
-  pivot_longer(alpha:zeta) %>% 
-  mutate(region = as.factor(region),
-         name = as.factor(name)) %>% 
-  left_join(hhs_to_state) %>% 
-  mutate(name = if_else(name == 'alpha' | name == 'delta', name, as.factor('other'))) %>% 
-  group_by(name, week, state) %>% 
-  summarize(value = sum(value)) %>% 
-  ungroup()
-
+  mutate(p = n/N)
+  
 df.incidence <-read_csv('https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv') %>%
   mutate(fips = as.numeric(fips),
          week = round_date(date, unit = 'week')) %>% 
@@ -155,12 +136,20 @@ df.sero <- read_csv('posterior_draws/postrat_seroprev_from_incidence.csv')
 # Set constants for (fully vaccinated) vaccine efficacy and protection from infection
 
 eps_inf = 0.8
+variants_tracking <- c('alpha', 'delta', 'other', 'omicron')
 
+# delta and omicron estimates from here: https://www.nejm.org/doi/full/10.1056/NEJMoa2119451
 
-eps_vax = tibble(name = rep(c('alpha', 'delta', 'other'), 2),
-                 type = c(rep('partial', 3), rep('complete', 3)),
-                 effectiveness = c(.5, .33, .6, .9, .66, .9)) %>% 
-  full_join(df.variant) %>% 
+eps_inf = 0.8
+
+# delta and omicron estimates from here: https://www.nejm.org/doi/full/10.1056/NEJMoa2119451
+
+eps_vax = tibble(name = rep(variants_tracking, 2),
+                 type = c(rep('partial', 4), rep('complete', 4)),
+                 effectiveness = c(.5, .33, .6, .05, .9, .66, .9, .01)) %>% 
+  full_join(df.variant %>% 
+              rename(name = lineage,
+                     value = p)) %>% 
   mutate(x = effectiveness * value) %>% 
   group_by(week, type, state) %>% 
   summarize(eps_vax = sum(x)) %>% 
