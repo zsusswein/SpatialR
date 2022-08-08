@@ -92,9 +92,10 @@ for (week.run in weeks){
   
   R <-  p %>% 
     left_join(df.sigma %>% filter(week == ymd(week.run)) %>% rename(j = fips)) %>% 
-    left_join(bg) %>% 
+    #left_join(bg) %>% 
     left_join(variant_multiplier) %>% 
-    mutate(beta.mult = if_else(is.na(beta.mult), 1, beta.mult), # for weeks w/ no variant multiplier, replace w/ 1 i.e. 100% wild type
+    mutate(bg = 1, 
+      beta.mult = if_else(is.na(beta.mult), 1, beta.mult), # for weeks w/ no variant multiplier, replace w/ 1 i.e. 100% wild type
            mean.R = mean * (1-mean.sigma) * bg * beta.mult) %>%     # R_ij = [(beta / gamma) * (bias_j) * (variant_i)] * p_ij * (1-sigma_j)
     select(i, j, week, mean.R)
   
