@@ -140,16 +140,12 @@ variants_tracking <- c('alpha', 'delta', 'other', 'omicron')
 
 # delta and omicron estimates from here: https://www.nejm.org/doi/full/10.1056/NEJMoa2119451
 
-eps_inf = 0.8
-
-# delta and omicron estimates from here: https://www.nejm.org/doi/full/10.1056/NEJMoa2119451
-
 eps_vax = tibble(name = rep(variants_tracking, 2),
                  type = c(rep('partial', 4), rep('complete', 4)),
                  effectiveness = c(.5, .33, .6, .05, .9, .66, .9, .01)) %>% 
   full_join(df.variant %>% 
-              rename(name = lineage,
-                     value = p)) %>% 
+                         rename(name = lineage,
+                                value = p)) %>% 
   mutate(x = effectiveness * value) %>% 
   group_by(week, type, state) %>% 
   summarize(eps_vax = sum(x)) %>% 
