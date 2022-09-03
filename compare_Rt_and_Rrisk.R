@@ -69,8 +69,7 @@ df %>% group_by(fips) %>% filter(fips ==24011) %>% ungroup() %>% filter(fips == 
   geom_line(aes(week,  Ri, color = cases_j))+
   geom_ribbon(aes(week, ymin = Ri - 2 * se.Ri, ymax = Ri + 2 * se.Ri), alpha = 0.2)+
   #geom_smooth(aes(week, Ri), method = 'loess', se = F)+
-  geom_text(aes(as.POSIXct("2020-11-05"), 2.0, label = round(cor(Rt, Ri), 3)))+
-  ylim(0, 3)
+  geom_text(aes(as.POSIXct("2020-11-05"), 2.0, label = round(cor(Rt, Ri), 3)))
 
 
 
