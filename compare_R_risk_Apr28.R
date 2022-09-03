@@ -66,10 +66,13 @@ for (week.run in weeks){
 }
 
 
-df.Rt
+df <- df.R_risk  %>% 
+  mutate(week = week + weeks(3)) %>%
+  rename(fips = j) %>% 
+  left_join(df.Rt)
 
 
-df.R_risk %>%
+df %>%
   rename(fips = j) %>% 
   left_join(df.Rt) %>% 
   left_join(df.fips ) %>% 
@@ -77,5 +80,21 @@ df.R_risk %>%
   ggplot()+
   geom_line(aes(week, Rt), linetype = 2)+
   geom_line(aes(week, Ri))+
+  facet_wrap(~name)
+
+
+
+df %>%
+  filter(week > ymd('2020-8-1'), incidence > 100, Ri < 4) %>%
+  left_join(df.Rt) %>% 
+  left_join(df.fips ) %>% 
+  filter(state == 'NM') %>% 
+  group_by(fips) %>% 
+  mutate(z_Rt = (Rt  - mean(Rt, na.rm = T)) / sd(Rt, na.rm = T),
+         z_Ri = (Ri - mean(Ri, na.rm = T)) / sd(Ri, na.rm = T)) %>% 
+  ggplot()+
+  geom_point(aes(week, z_Rt), color = 'red')+
+  geom_point(aes(week, z_Ri))+
+  geom_smooth(aes(week, z_Ri, group =fips), se = F, formula = "y ~ s(x, bs = cs, k = 3)")+
   facet_wrap(~name)
 
