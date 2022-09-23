@@ -58,7 +58,7 @@ for (week.run in weeks){
   # df.R_risk <- full_join(df.R_risk, read_csv(paste0(path, '/', week.run, '.csv'),
   #                                            col_types = 'dddd') %>% mutate(week = ymd(week.run)))
   # 
-  df.R_risk <- full_join(df.R_risk, read_csv(paste0('posterior_draws/R/R_risk_APR28/', week.run, '.csv'),
+  df.R_risk <- full_join(df.R_risk, read_csv(paste0('posterior_draws/R/R_risk_/', week.run, '.csv'),
                                              col_types = 'dddd') %>% mutate(week = ymd(week.run)))
   
   

@@ -6,6 +6,8 @@ library(tidyverse)
 library(vroom)
 library(lubridate)
 library(glue)
+library(doMC)
+library(foreach)
 
 ###################
 # Data
@@ -63,9 +65,10 @@ df.claims <- read_csv('data/clean_data.csv') %>%
 
 df.vax = read_csv('data/vaccination.csv') %>% 
   rename(complete = Complete,
-         partial = Partial)
+         partial = Partial) %>% 
+  mutate(partial = partial - complete)
 
-df.variant <- write_csv(df, 'data/collapsed_variant_proportion.csv') %>% 
+df.variant <- read_csv('data/collapsed_variant_proportion.csv') %>% 
   mutate(lineage = str_to_lower(lineage),
          lineage = if_else(lineage %in% variants_tracking,
                            lineage,
@@ -139,10 +142,11 @@ eps_inf = 0.8
 variants_tracking <- c('alpha', 'delta', 'other', 'omicron')
 
 # delta and omicron estimates from here: https://www.nejm.org/doi/full/10.1056/NEJMoa2119451
+# alpha estimates from here: https://www.nature.com/articles/s41467-021-25913-9
 
 eps_vax = tibble(name = rep(variants_tracking, 2),
                  type = c(rep('partial', 4), rep('complete', 4)),
-                 effectiveness = c(.5, .33, .6, .05, .9, .66, .9, .01)) %>% 
+                 effectiveness = c(1, .33, .6, 0.0, 1, .66, .9, .01)) %>% 
   full_join(df.variant %>% 
                          rename(name = lineage,
                                 value = p)) %>% 
@@ -157,13 +161,18 @@ eps_vax = tibble(name = rep(variants_tracking, 2),
 ###################
 # Iterate through states
 
+registerDoMC(cores = 4)
+
 
 df.sigma.full <- tibble(week = POSIXct(),
                         fips = double(),
                         mean.sero = double(),
                         se.sero = double())
 
-for (state.run in states){
+df.sigma.full <- foreach (
+          state.run=states, 
+         .inorder = FALSE, 
+         .combine = rbind)  %dopar% {
   
   df.sigma <- df.incidence %>% 
     filter(state == state.run) %>% 
@@ -199,10 +208,10 @@ for (state.run in states){
            se.sigma = sqrt(var.sigma)) %>% 
     left_join(nyt_exceptions %>% rename(fips = exception_fips)) %>% 
     mutate(fips = if_else(!is.na(true_fips), true_fips, fips)) %>% 
-    select(week, fips, mean.sigma, se.sigma)
+    select(week, fips, mean.sigma, se.sigma) %>% 
+    mutate(state = state.run)
   
-  
-  df.sigma.full <- full_join(df.sigma, df.sigma.full)
+  df.sigma
   
 }
 
@@ -242,7 +251,8 @@ df.sigma <- df.incidence %>%
          se.sigma = sqrt(var.sigma)) %>% 
   left_join(nyt_exceptions %>% rename(fips = exception_fips)) %>% 
   mutate(fips = if_else(!is.na(true_fips), true_fips, fips)) %>% 
-  select(week, fips, mean.sigma, se.sigma)
+  select(week, fips, mean.sigma, se.sigma) %>% 
+  mutate(state = state.run)
 
 #df.vax %>% 
 #  select(week, fips, complete, partial) %>% 
