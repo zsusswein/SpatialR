@@ -6,6 +6,8 @@ library(tidyverse)
 library(glue)
 library(lubridate)
 library(readxl)
+library(foreach)
+library(doMC)
 
 ###################
 # Data
@@ -14,10 +16,7 @@ library(readxl)
 df.fips <- read_csv('data/state_and_county_fips_master.csv')
 
 # county i specific transmissibility multiplier
-variant_multiplier <- read_csv('data/transmissibility_multiplier_from_variants.csv') %>% 
-  left_join(df.fips) %>% 
-  rename(i = fips) %>% 
-  select(week, i, beta.mult)
+variant_multiplier <- read_csv('data/transmissibility_multiplier_from_variants.csv')
 
 # list of all fips values
 fips.all <- read_csv('posterior_draws/contact_no_hh.csv') %>% 
@@ -37,8 +36,7 @@ bg <- read_csv('posterior_draws/bg_from_Rt.csv') %>%  # beta / gamma
   select(j, bg)
 
 # sigma, the proportion of the population *immune* (i.e. p_susceptible = 1-sigma)
-df.sigma <- read_csv('posterior_draws/sigma_full_incidence_unscaled.csv', col_types = 'Tddddd') %>% 
-  select(-mean.sero, -se.sero) %>% 
+df.sigma <- read_csv('posterior_draws/sigma_full_incidence_unscaled.csv', col_types = 'Tdd--') %>% 
   mutate(fips = if_else(fips ==02270, 02158, fips),
          fips = if_else(fips == 46113, 46102, fips)) %>% 
   group_by(week, fips) %>% 
@@ -63,7 +61,10 @@ files <- dir(path = 'data/clean_mobility')[4:75]
 ###################
 # Iterate through weeks
 
-for (week.run in weeks){
+registerDoMC(cores = 4)
+
+foreach(week.run = weeks,
+        .inorder = FALSE) %dopar% {
   
   ##############
   
@@ -75,11 +76,9 @@ for (week.run in weeks){
   if(paste0(week.run, '.csv') %in% files){
     
     path <- glue('data/mobility/', week.run, '.csv')
-    
-    last.successful.path <- paste0('data/mobility/', week.run, '.csv')
   }else{
     
-    path <- last.successful.path
+    path <-'data/mobility/2021-11-21.csv'
   }
   
   #########
@@ -93,6 +92,8 @@ for (week.run in weeks){
   R <-  p %>% 
     left_join(df.sigma %>% filter(week == ymd(week.run)) %>% rename(j = fips)) %>% 
     #left_join(bg) %>% 
+    left_join(df.fips %>% 
+                mutate(j = fips)) %>% 
     left_join(variant_multiplier) %>% 
     mutate(bg = 1, 
       beta.mult = if_else(is.na(beta.mult), 1, beta.mult), # for weeks w/ no variant multiplier, replace w/ 1 i.e. 100% wild type
