@@ -9,8 +9,6 @@ library(glue)
 #############
 # Data
 
-
-
 df.fips <- read_csv('data/state_and_county_fips_master.csv')
 
 
@@ -71,7 +69,7 @@ df.incidence <-read_csv('https://raw.githubusercontent.com/nytimes/covid-19-data
 weeks <- df.incidence %>% 
   filter(fips==1001) %>% 
   arrange(week) %>% 
-  filter(week >= ymd("2020-01-26")) %>% 
+  filter(week >= ymd("2020-07-1"), week <= ymd('2022-2-1')) %>% 
   mutate(week = as.character.Date(week)) %>% 
   pull(week)
 
@@ -80,7 +78,8 @@ weeks <- df.incidence %>%
 
 for (week.run in weeks){
   
-  df.Rij <- read_csv(glue('posterior_draws/R/R_ij_Apr28afternoon/', week.run, '.csv')) %>% 
+  df.Rij <- read_csv(glue('posterior_draws/R/R_ij/', week.run, '.csv'),
+                     n_max = 100) %>% 
     unique()
   
   df.risk <- df.Rij %>%  
@@ -121,6 +120,6 @@ for (week.run in weeks){
   #print(full_join(df.risk, var) %>% summary())
   
   
-  write_csv(df.risk, glue('posterior_draws/R/R_risk_APR28/', week.run, '.csv'))
+  write_csv(df.risk, glue('posterior_draws/R/R_ij/', week.run, '.csv'))
   
 }
