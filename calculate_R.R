@@ -8,6 +8,7 @@ library(lubridate)
 library(readxl)
 library(foreach)
 library(doMC)
+library(arrow)
 
 ###################
 # Data
@@ -55,7 +56,7 @@ weeks <- df.sigma %>%
   pull(week)
 
 # the mobility files cleaned and available
-files <- dir(path = 'data/clean_mobility')[4:75]
+files <- dir(path = 'data/mobility_parquet')[4:75]
 
 
 ###################
@@ -73,18 +74,17 @@ foreach(week.run = weeks,
   ##############
   # Pull relevant weeks and add missing fips codes so that dims match
   
-  if(paste0(week.run, '.csv') %in% files){
+  if(paste0(week.run, '.csv.parquet') %in% files){
     
-    path <- glue('data/mobility/', week.run, '.csv')
+    path <- glue('data/mobility_parquet/', week.run, '.csv.parquet')
   }else{
     
-    path <-'data/mobility/2021-11-21.csv'
+    path <-'data/mobility_parquet/2021-11-21.csv.parquet'
   }
   
   #########
   
-  p <- read_csv(path,
-                col_types = 'iid') %>% 
+  p <- read_parquet(path) %>% 
     filter(j != 36005)
   
   #########
@@ -108,10 +108,10 @@ foreach(week.run = weeks,
   #  ggplot(aes(R))+geom_histogram()
   #
   #print(a)
-  write_csv(R %>% 
+  write_parquet(R %>% 
               group_by(i) %>% 
-              summarize(R = sum(mean.R, na.rm=T)), glue('posterior_draws/R/R_i/', week.run, '.csv'))
-  write_csv(R, glue('posterior_draws/R/R_ij/', week.run, '.csv'))
+              summarize(R = sum(mean.R, na.rm=T)), glue('posterior_draws/R/R_i_parquet/', week.run, '.parquet'))
+  write_parquet(R, glue('posterior_draws/R/R_ij_parquet/', week.run, '.parquet'))
   
 }
 

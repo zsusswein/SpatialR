@@ -5,6 +5,8 @@
 library(tidyverse)
 library(lubridate)
 library(glue)
+library(foreach)
+library(doMC)
 
 #############
 # Data
@@ -76,10 +78,12 @@ weeks <- df.incidence %>%
 #############
 # Calculate risk df
 
-for (week.run in weeks){
+registerDoMC(cores = 4)
+
+foreach(week.run = weeks,
+        .inorder = FALSE) %dopar%{
   
-  df.Rij <- read_csv(glue('posterior_draws/R/R_ij/', week.run, '.csv'),
-                     n_max = 100) %>% 
+  df.Rij <- read_parquet(glue('posterior_draws/R/R_ij_parquet/', week.run, '.parquet')) %>% 
     unique()
   
   df.risk <- df.Rij %>%  
@@ -120,6 +124,6 @@ for (week.run in weeks){
   #print(full_join(df.risk, var) %>% summary())
   
   
-  write_csv(df.risk, glue('posterior_draws/R/R_ij/', week.run, '.csv'))
+  write_parquet(df.risk, glue('posterior_draws/R/R_risk_parquet/', week.run, '.parquet'))
   
 }

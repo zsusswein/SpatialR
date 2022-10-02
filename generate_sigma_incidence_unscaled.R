@@ -146,7 +146,7 @@ variants_tracking <- c('alpha', 'delta', 'other', 'omicron')
 
 eps_vax = tibble(name = rep(variants_tracking, 2),
                  type = c(rep('partial', 4), rep('complete', 4)),
-                 effectiveness = c(1, .33, .6, 0.0, 1, .66, .9, .01)) %>% 
+                 effectiveness = c(1, .33, 1, 0.0, 1, 1, .9, .01)) %>% 
   full_join(df.variant %>% 
                          rename(name = lineage,
                                 value = p)) %>% 
